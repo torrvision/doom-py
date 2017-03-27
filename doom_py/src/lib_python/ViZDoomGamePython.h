@@ -35,45 +35,84 @@
 #include <vector>
 
 namespace vizdoom {
-    using boost::python::api::object;
+
+    namespace bpy       = boost::python;
+    namespace bpya      = bpy::api;
+    namespace bpyn      = bpy::numeric;
+
+    // For GCC versions lower then 5 compatibility
+    // Python version of Label struct with Python string instead C++ string type.
+    struct LabelPython{
+        unsigned int objectId;
+        bpy::str objectName;
+        uint8_t value;
+        double objectPositionX;
+        double objectPositionY;
+        double objectPositionZ;
+    };
 
     struct GameStatePython {
         unsigned int number;
-        object imageBuffer;
-        object gameVariables;
-        GameStatePython(int n, object buf, object v ):number(n),imageBuffer(buf),gameVariables(v){}
-        GameStatePython(int n, object buf):number(n),imageBuffer(buf){}
-        GameStatePython(int n):number(n){}
+        unsigned int tic;
+
+        bpya::object gameVariables;
+        //bpy::list gameVariables;
+
+        bpya::object screenBuffer;
+        bpya::object depthBuffer;
+        bpya::object labelsBuffer;
+        bpya::object automapBuffer;
+
+        bpy::list labels;
     };
 
     class DoomGamePython : public DoomGame {
         
     public:        
         DoomGamePython();
-        bool init();
-        
-        GameStatePython getState();
-        boost::python::list getLastAction();
-        object getGameScreen();
-        void setAction(boost::python::list const &action);
-        double makeAction(boost::python::list const &action);
-        double makeAction(boost::python::list const &action, unsigned int tics);
+
+        void setAction(bpy::list const &pyAction);
+        double makeAction(bpy::list const &pyAction, unsigned int tics = 1);
+
+        GameStatePython* getState();
+        bpy::list getLastAction();
+
+        bpy::list getAvailableButtons();
+        void setAvailableButtons(bpy::list const &pyButtons);
+
+        bpy::list getAvailableGameVariables();
+        void setAvailableGameVariables(bpy::list const &pyGameVariables);
+
 
         // These functions are workaround for
         // "TypeError: No registered converter was able to produce a C++ rvalue of type std::string from this Python object of type str"
-        // on GCC < 5
-        bool loadConfig(boost::python::str const &pyPath);
-        void setViZDoomPath(boost::python::str const &pyPath);
-        void setDoomGamePath(boost::python::str const &pyPath);
-        void setDoomScenarioPath(boost::python::str const &pyPath);
-        void setDoomMap(boost::python::str const &pyMap);
-        void setDoomConfigPath(boost::python::str const &pyPath);
-        void addGameArgs(boost::python::str const &pyArgs);
-        void sendGameCommand(boost::python::str const &pyCmd);
+        // on GCC versions lower then 5
+        bool loadConfig(bpy::str const &pyPath);
+
+        void newEpisode();
+        void newEpisode(bpy::str const &pyPath);
+        void replayEpisode(bpy::str const &pyPath, unsigned int player = 0);
+
+        void setViZDoomPath(bpy::str const &pyPath);
+        void setDoomGamePath(bpy::str const &pyPath);
+        void setDoomScenarioPath(bpy::str const &pyPath);
+        void setDoomMap(bpy::str const &pyMap);
+        void setDoomConfigPath(bpy::str const &pyPath);
+        void addGameArgs(bpy::str const &pyArgs);
+        void sendGameCommand(bpy::str const &pyCmd);
 
     private:
-        npy_intp imageShape[3];
-        static std::vector<int> pyListToIntVector(boost::python::list const &action);
+        GameStatePython* pyState;
+
+        npy_intp colorShape[3];
+        npy_intp grayShape[2];
+
+        void updateBuffersShapes();
+
+        template<class T> static bpy::list vectorToPyList(const std::vector<T>& vector);
+        template<class T> static std::vector<T> pyListToVector(bpy::list const &pyList);
+
+        static bpy::object dataToNumpyArray(int dims, npy_intp * shape, int type, void * data);
 
     };
 

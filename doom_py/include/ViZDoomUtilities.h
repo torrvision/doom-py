@@ -23,35 +23,40 @@
 #ifndef __VIZDOOM_UTILITIES_H__
 #define __VIZDOOM_UTILITIES_H__
 
-#include "ViZDoomDefines.h"
+#include "ViZDoomConsts.h"
+#include "ViZDoomTypes.h"
 
 namespace vizdoom {
-    /*
-     * Calculates how many tics will be made during given number of milliseconds
-     * (assuming 35 ticks per second --- designed Doom tic-rate).
-     */
-    double DoomTicsToMs(double tics);
 
-    /*
-     * Calculates the number of milliseconds that will pass during specified number of tics
-     * (assuming 35 tics per second --- designed Doom tic-rate).
-     */
-    double MsToDoomTics(double ms);
 
-    /*
-     * Converts Doom's fixed point numeral to a double value.
-     */
-    double DoomFixedToDouble(int doomFixed);
+    /* Time helpers */
+    /*----------------------------------------------------------------------------------------------------------------*/
 
-    /*
-     * Returns true if button is binary button.
-     */
+    double doomTicsToMs(double tics, unsigned int ticrate = DEFAULT_TICRATE);
+    double msToDoomTics(double ms, unsigned int ticrate = DEFAULT_TICRATE);
+    double doomTicsToSec(double tics, unsigned int ticrate = DEFAULT_TICRATE);
+    double secToDoomTics(double sec, unsigned int ticrate = DEFAULT_TICRATE);
+
+
+    /* DoomFixed helpers */
+    /*----------------------------------------------------------------------------------------------------------------*/
+
+    double doomFixedToDouble(int doomFixed);
+    double doomFixedToDouble(double doomFixed);
+
+
+    /* Types helpers */
+    /*----------------------------------------------------------------------------------------------------------------*/
+
+    std::string modeToString(Mode mode);
+    std::string screenToString(ScreenFormat screenFormat);
+    std::string automapModeToString(AutomapMode mode);
+    std::string gameVariableToString(GameVariable gameVariable);
+    std::string buttonToString(Button button);
+
     bool isBinaryButton(Button button);
-
-    /*
-     * Returns true if button is delta button.
-     */
     bool isDeltaButton(Button button);
+
 }
 
 #endif

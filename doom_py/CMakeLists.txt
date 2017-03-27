@@ -39,6 +39,7 @@ endif()
 # Compiler dependent settings
 if(CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions("-fPIC")
+        add_definitions("-std=c++11")
 endif()
 
 if(MSVC)

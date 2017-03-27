@@ -73,6 +73,8 @@ RUN apt-get install -y python-numpy cmake zlib1g-dev libjpeg-dev libboost-all-de
 
 #RUN cd /doom && cmake -DBUILD_PYTHON3=ON
 
+#RUN cd /doom && python setup.py build && pip install -e .
+
 ############################################
 ## SECTION: Additional libraries and tools #
 ############################################

@@ -23,32 +23,32 @@
 #ifndef __VIZDOOM_CONTROLLER_H__
 #define __VIZDOOM_CONTROLLER_H__
 
-#include "ViZDoomDefines.h"
+#include "ViZDoomTypes.h"
+#include "ViZDoomMessageQueue.h"
+#include "ViZDoomSharedMemory.h"
 
 #include <boost/asio.hpp>
-#include <boost/interprocess/ipc/message_queue.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/random.hpp>
 #include <boost/thread.hpp>
 #include <string>
 #include <vector>
 
-namespace vizdoom{
+namespace vizdoom {
 
     namespace b         = boost;
-    namespace bip       = boost::interprocess;
     namespace ba        = boost::asio;
+    namespace bip       = boost::interprocess;
+    namespace br        = boost::random;
+    namespace bs        = boost::system;
 
+#define INSTANCE_ID_LENGHT 10
 
 /* Shared memory's settings */
 #define SM_NAME_BASE        "ViZDoomSM"
 
 /* Message queues' settings */
-#define MQ_NAME_CTR_BASE    "ViZDoomMQCtr"
-#define MQ_NAME_DOOM_BASE   "ViZDoomMQDoom"
-#define MQ_MAX_MSG_NUM      64
-#define MQ_MAX_MSG_SIZE     sizeof(DoomController::MessageCommandStruct)
-#define MQ_MAX_CMD_LEN      128
+#define MQ_CTR_NAME_BASE    "ViZDoomMQCtr"
+#define MQ_DOOM_NAME_BASE   "ViZDoomMQDoom"
 
 /* Messages' codes */
 #define MSG_CODE_DOOM_DONE              11
@@ -58,12 +58,14 @@ namespace vizdoom{
 
 #define MSG_CODE_TIC                    21
 #define MSG_CODE_UPDATE                 22
-#define MSG_CODE_TIC_N_UPDATE           23
+#define MSG_CODE_TIC_AND_UPDATE         23
 #define MSG_CODE_COMMAND                24
 #define MSG_CODE_CLOSE                  25
-#define MSG_CODE_ERROR                  26
 
-#define MSG_CODE_SIGNAL_INT_ABRT_TERM   30
+#define MSG_CODE_SIG                    30
+#define MSG_CODE_SIGINT                 30 + SIGINT
+#define MSG_CODE_SIGABRT                30 + SIGABRT
+#define MSG_CODE_SIGTERM                30 + SIGTERM
 
 /* OSes */
 #ifdef __linux__
@@ -78,76 +80,10 @@ namespace vizdoom{
 
     public:
 
-        /* SM structs */
-        /*------------------------------------------------------------------------------------------------------------*/
-
-        struct InputStruct {
-            int BT[ButtonsNumber];
-            bool BT_AVAILABLE[ButtonsNumber];
-            int BT_MAX_VALUE[DeltaButtonsNumber];
-        };
-
-        struct GameVariablesStruct {
-            unsigned int VERSION;
-            char VERSION_STR[8];
-
-            unsigned int GAME_TIC;
-            int GAME_STATE;
-            int GAME_ACTION;
-            unsigned int GAME_SEED;
-            unsigned int GAME_RNG_SEED;
-            bool GAME_SETTINGS_CONTROLLER;
-            bool NET_GAME;
-
-            unsigned int SCREEN_WIDTH;
-            unsigned int SCREEN_HEIGHT;
-            size_t SCREEN_PITCH;
-            size_t SCREEN_SIZE;
-            int SCREEN_FORMAT;
-
-            unsigned int MAP_START_TIC;
-            unsigned int MAP_TIC;
-
-            int MAP_REWARD;
-
-            int MAP_USER_VARS[UserVariablesNumber];
-
-            int MAP_KILLCOUNT;
-            int MAP_ITEMCOUNT;
-            int MAP_SECRETCOUNT;
-            bool MAP_END;
-
-            bool PLAYER_HAS_ACTOR;
-            bool PLAYER_DEAD;
-
-            char PLAYER_NAME[16];
-            int PLAYER_KILLCOUNT;
-            int PLAYER_ITEMCOUNT;
-            int PLAYER_SECRETCOUNT;
-            int PLAYER_FRAGCOUNT;
-            int PLAYER_DEATHCOUNT;
-
-            bool PLAYER_ON_GROUND;
-
-            int PLAYER_HEALTH;
-            int PLAYER_ARMOR;
-
-            bool PLAYER_ATTACK_READY;
-            bool PLAYER_ALTATTACK_READY;
-
-            int PLAYER_SELECTED_WEAPON;
-            int PLAYER_SELECTED_WEAPON_AMMO;
-
-            int PLAYER_AMMO[SlotsNumber];
-            int PLAYER_WEAPON[SlotsNumber];
-
-            int PLAYERS_COUNT;
-            char PLAYERS_NAME[MaxNumberOfPlayers][16];
-            int PLAYERS_FRAGCOUNT[MaxNumberOfPlayers];
-        };
-
         DoomController();
+
         ~DoomController();
+
 
         /* Flow control */
         /*------------------------------------------------------------------------------------------------------------*/
@@ -155,56 +91,51 @@ namespace vizdoom{
         bool init();
         void close();
         void restart();
-
-        void intSignal();   //must be public
-
         bool isTicPossible();
-        void tic();
-        void tic(bool update);
-        void tics(unsigned int tics);
-        void tics(unsigned int tics, bool update);
-        void restartMap();
+        void tic(bool update = true);
+        void tics(unsigned int tics, bool update = true);
+        void restartMap(std::string demoPath = "");
         void respawnPlayer();
         bool isDoomRunning();
         void sendCommand(std::string command);
 
+        void setTicrate(unsigned int ticrate);
+        unsigned int getTicrate();
+
+        unsigned int getDoomSeed();
+        void setDoomSeed(unsigned int seed);
+        void clearDoomSeed();
+
+        unsigned int getInstanceSeed();
+        void setInstanceSeed(unsigned int seed);
+
+        std::string getMap();
+        void setMap(std::string map, std::string demoPath = "");
+        void playDemo(std::string demoPath, int player = 0);
+
+
         /* General game settings */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        unsigned int getSeed();
-        unsigned int getRngSeed();
-        void setRngSeed(unsigned int seed);
-        void clearRngSeed();
-        void setUseRngSeed(bool use);
-        bool isUseRngSeed();
-
-        std::string getInstanceId();
-        void setInstanceId(std::string id);
-
         std::string getExePath();
-        void setExePath(std::string path);
+        void setExePath(std::string exePath);
 
         std::string getIwadPath();
-        void setIwadPath(std::string path);
+        void setIwadPath(std::string iwadPath);
 
         std::string getFilePath();
-        void setFilePath(std::string path);
-
-        std::string getMap();
-        void setMap(std::string map);
+        void setFilePath(std::string filePath);
 
         int getSkill();
         void setSkill(int skill);
 
         std::string getConfigPath();
-        void setConfigPath(std::string path);
+        void setConfigPath(std::string configPath);
 
         unsigned int getMapStartTime();
         void setMapStartTime(unsigned int tics);
-
         unsigned int getMapTimeout();
         void setMapTimeout(unsigned int tics);
-
         bool isMapLastTic();
         bool isMapFirstTic();
         bool isMapEnded();
@@ -222,87 +153,89 @@ namespace vizdoom{
 
         void setWindowHidden(bool windowHidden);
         void setNoXServer(bool noXServer);
-
         void setRenderHud(bool hud);
+        void setRenderMinimalHud(bool minHud);
         void setRenderWeapon(bool weapon);
         void setRenderCrosshair(bool crosshair);
         void setRenderDecals(bool decals);
         void setRenderParticles(bool particles);
+        void setRenderEffectsSprites(bool sprites);
+        void setRenderMessages(bool messages);
+        void setRenderCorpses(bool corpses);
+        void setRenderScreenFlashes(bool flashes);
 
         void setScreenResolution(unsigned int width, unsigned int height);
-        void setScreenWidth(unsigned int width);
-        void setScreenHeight(unsigned int height);
-        void setScreenFormat(ScreenFormat format);
-
-        ScreenFormat getScreenFormat();
         unsigned int getScreenWidth();
+        void setScreenWidth(unsigned int width);
         unsigned int getScreenHeight();
+        void setScreenHeight(unsigned int height);
+        ScreenFormat getScreenFormat();
+
+        void setScreenFormat(ScreenFormat format);
         unsigned int getScreenChannels();
         unsigned int getScreenDepth();
         size_t getScreenPitch();
         size_t getScreenSize();
 
-        uint8_t * const getScreen();
+        /* Depth buffer */
+        bool isDepthBufferEnabled();
+        void setDepthBufferEnabled(bool depthBuffer);
 
+        /* Labels */
+        bool isLabelsEnabled();
+        void setLabelsEnabled(bool labels);
+
+        /* Automap */
+        bool isAutomapEnabled();
+        void setAutomapEnabled(bool map);
+        void setAutomapMode(AutomapMode mode);
+        void setAutomapRotate(bool rotate);
+        void setAutomapRenderTextures(bool textures);
+
+        /* Buffers in SM */
+        uint8_t *const getScreenBuffer();
+        uint8_t *const getDepthBuffer();
+        uint8_t *const getLabelsBuffer();
+        uint8_t *const getAutomapBuffer();
 
         /* Buttons getters and setters */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        InputStruct * const getInput();
-        GameVariablesStruct * const getGameVariables();
+        SMInputState *const getInput();
 
+        SMGameState *const getGameState();
+
+        /* Buttons state */
         int getButtonState(Button button);
         void setButtonState(Button button, int state);
         void toggleButtonState(Button button);
+
+        /* Buttons availableity */
         bool isButtonAvailable(Button button);
         void setButtonAvailable(Button button, bool set);
         void resetButtons();
         void disableAllButtons();
-        void setButtonMaxValue(Button button, int value);
-        int getButtonMaxValue(Button button);
-        void availableAllButtons();
 
+        int getButtonMaxValue(Button button);
+        void setButtonMaxValue(Button button, unsigned int value);
+        void availableAllButtons();
         bool isAllowDoomInput();
         void setAllowDoomInput(bool set);
-
         bool isRunDoomAsync();
         void setRunDoomAsync(bool set);
 
 
-        /* GameVariables getters */
+        /* GameState getters */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        int getGameVariable(GameVariable var);
-
-        int getGameTic();
+        double getGameVariable(GameVariable var);
+        unsigned int getGameTic();
+        bool isMultiplayerGame();
         bool isNetGame();
-
-        int getMapTic();
+        unsigned int getMapTic();
         int getMapReward();
-
-        int getMapKillCount();
-        int getMapItemCount();
-        int getMapSecretCount();
-
         bool isPlayerDead();
 
-        int getPlayerKillCount();
-        int getPlayerItemCount();
-        int getPlayerSecretCount();
-        int getPlayerFragCount();
-        int getPlayerDeathCount();
-
-        int getPlayerHealth();
-        int getPlayerArmor();
-        bool isPlayerOnGround();
-        bool isPlayerAttackReady();
-        bool isPlayerAltAttackReady();
-        int getPlayerSelectedWeaponAmmo();
-        int getPlayerSelectedWeapon();
-
-        int getPlayerAmmo(unsigned int slot);
-        int getPlayerWeapon(unsigned int slot);
-        int getUser(unsigned int slot);
 
     private:
 
@@ -312,76 +245,68 @@ namespace vizdoom{
         bool doomRunning;
         bool doomWorking;
 
+        bool receiveMQMsg();
         void waitForDoomStart();
         void waitForDoomWork();
         void waitForDoomMapStartTime();
         void createDoomArgs();
         void launchDoom();
-        void handleSignals();
-
 
         /* Seed */
         /*------------------------------------------------------------------------------------------------------------*/
 
         void generateInstanceId();
 
-        bool useRngSeed;
-        int rngSeed;
+        unsigned int getNextDoomSeed();
+
+        void forceDoomSeed(unsigned int seed);
+
+        bool doomStaticSeed;
+        unsigned int doomSeed;
+        unsigned int instanceSeed;
+
+        br::mt19937 instanceRng;
         std::string instanceId;
 
 
         /* Threads */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        b::thread *doomThread;
-        ba::io_service ioService;
+        ba::io_service *ioService;
         b::thread *signalThread;
+
+        void handleSignals();
+
+        static void signalHandler(ba::signal_set &signal, DoomController *controller,
+                                  const bs::error_code &error, int sigNumber);
+
+        void intSignal(int sigNumber);
+
+        b::thread *doomThread;
         //bpr::child doomProcess;
 
 
         /* Message queues */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        struct MessageSignalStruct {
-            uint8_t code;
-        };
-
-        struct MessageCommandStruct {
-            uint8_t code;
-            char command[MQ_MAX_CMD_LEN];
-        };
-
-        void MQInit();
-        void MQControllerSend(uint8_t code);
-        void MQDoomSend(uint8_t code);
-        void MQDoomSend(uint8_t code, const char *command);
-        void MQControllerRecv(void *msg, size_t &size, unsigned int &priority);
-        void MQClose();
-
-        bip::message_queue *MQController;
-        bip::message_queue *MQDoom;
-        std::string MQControllerName;
-        std::string MQDoomName;
+        MessageQueue *MQDoom;
+        MessageQueue *MQController;
 
 
         /* Shared memory */
         /*------------------------------------------------------------------------------------------------------------*/
 
-        void SMInit();
-        void SMClose();
+        SharedMemory *SM;
 
-        bip::shared_memory_object SM;
-        std::string SMName;
+        SMGameState *gameState;
 
-        bip::mapped_region *InputSMRegion;
-        InputStruct *input;
-        InputStruct *_input;
+        SMInputState *input;
+        SMInputState *_input;
 
-        bip::mapped_region *GameVariablesSMRegion;
-        GameVariablesStruct *gameVariables;
-
-        bip::mapped_region *ScreenSMRegion;
-        uint8_t *screen;
+        uint8_t *screenBuffer;
+        uint8_t *depthBuffer;
+        uint8_t *automapBuffer;
+        uint8_t *labelsBuffer;
 
 
         /* Settings */
@@ -390,8 +315,19 @@ namespace vizdoom{
         unsigned int screenWidth, screenHeight, screenChannels, screenDepth;
         size_t screenPitch, screenSize;
         ScreenFormat screenFormat;
+        bool depth;
+        bool automap;
+        bool labels;
 
-        bool hud, weapon, crosshair, decals, particles;
+        bool hud, minHud, weapon, crosshair, decals, particles, sprites, messages, corpses, flashes;
+        AutomapMode amMode;
+        bool amRotate, amTextures;
+
+        bool updateSettings;
+
+        int getRenderModeValue();
+
+        void setRenderMode(int value);
 
         bool windowHidden, noXServer;
 
@@ -402,20 +338,22 @@ namespace vizdoom{
         std::string iwadPath;
         std::string filePath;
         std::string map;
+        std::string demoPath;
         std::string configPath;
         int skill;
 
         bool allowDoomInput;
         bool runDoomAsync;
 
+        unsigned int ticrate;
         unsigned int mapStartTime;
         unsigned int mapTimeout;
         unsigned int mapRestartCount;
-        bool mapRestarting;
+        bool mapChanging;
         unsigned int mapLastTic;
 
-        std::vector <std::string> customArgs;
-        std::vector <std::string> doomArgs;
+        std::vector<std::string> customArgs;
+        std::vector<std::string> doomArgs;
 
     };
 
